@@ -59,7 +59,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <div class="form-title">
 	<i class="fa-solid fa-i-cursor icon"></i>
-	<h1>Paragrah to One Line</h1>
+	<h1>Paragraph to One Line</h1>
 </div>
 
 <div class="container">
