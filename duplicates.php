@@ -18,7 +18,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Retrieve the input data based on the button pressed
     $finderInput = filter_input(INPUT_POST, "finderInput", FILTER_SANITIZE_SPECIAL_CHARS);
     $removerInput = filter_input(INPUT_POST, "removerInput", FILTER_SANITIZE_SPECIAL_CHARS);
-    $delimiter = isset($_POST['delimiter']) ? $_POST['delimiter'] : 'character'; // Get the chosen delimiter
+    $delimiter = isset($_POST['delimiter']) ? $_POST['delimiter'] : 'whitespace'; // Get the chosen delimiter
 
     // Initialize a variable to hold output messages
     $output = "";
@@ -27,12 +27,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     function processInput($input, $delimiter)
     {
         switch ($delimiter) {
-            case ',':
+            case 'comma':
                 return array_map('trim', explode(',', strtolower($input))); // Split by comma
             case 'character':
                 return str_split(strtolower($input)); // Split by each character
-            case 'newline':
-                return array_filter(array_map('trim', explode("\n", strtolower($input)))); // Split by newline
             default:
                 return array_filter(array_map('trim', preg_split('/\s+/', strtolower($input)))); // Split by whitespace
         }
@@ -62,6 +60,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $output .= "<h3>No duplicates found.</h3>";
         }
 
+        try {
+            // Log the action in the database
+            global $connect;
+            $sql = "INSERT INTO duplicatefinder (username, date) VALUES(:username, CURRENT_TIMESTAMP)";
+            $stmt = $connect->prepare($sql);
+            $stmt->bindParam(":username", $username);
+            $stmt->execute();
+        } catch (PDOException $e) {
+            $output = $e->getMessage();
+        }
+
     } elseif (isset($_POST['remove_duplicates'])) { // Handle 'Remove Duplicates' button
         // Process input based on chosen delimiter
         if ($delimiter === ',') {
@@ -74,7 +83,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $inputArray = processInput($removerInput, $delimiter);
             $uniqueItems = array_unique($inputArray); // Remove duplicates
             $result = implode(
-                $delimiter === 'whitespace' ? ' ' : ($delimiter === 'newline' ? "\n" : ''),
+                $delimiter === 'whitespace' ? ' ' : '',
                 $uniqueItems
             );
         }
@@ -82,17 +91,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Display the result string with duplicates removed
         $output .= "<h3>String with Duplicates Removed:</h3>";
         $output .= "<p>" . nl2br(htmlspecialchars($result)) . "</p>";
-    }
 
-    try {
-        // Log the action in the database
-        global $connect;
-        $sql = "INSERT INTO duplicatefinder (username, date) VALUES(:username, CURRENT_TIMESTAMP)";
-        $stmt = $connect->prepare($sql);
-        $stmt->bindParam(":username", $username);
-        $stmt->execute();
-    } catch (PDOException $e) {
-        $output = $e->getMessage();
+        try {
+            // Log the action in the database
+            global $connect;
+            $sql = "INSERT INTO duplicateremover (username, date) VALUES(:username, CURRENT_TIMESTAMP)";
+            $stmt = $connect->prepare($sql);
+            $stmt->bindParam(":username", $username);
+            $stmt->execute();
+        } catch (PDOException $e) {
+            $output = $e->getMessage();
+        }
     }
 
 }
@@ -128,8 +137,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <br/><label style="padding-right:5px;">Delimiter:</label><br/>
             <input type="radio" name="delimiter" value="whitespace" checked> Whitespace
             <input type="radio" name="delimiter" value="comma"> Comma
-            <input type="radio" name="delimiter" value="character"> Character
-            <input type="radio" name="delimiter" value="newline"> Next Line<br><br>
+            <input type="radio" name="delimiter" value="character"> Character<br><br>
             <input type="submit" name="find_duplicates" value="Find Duplicates">
         </form>
         <div class="result-section">
@@ -152,8 +160,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <br/><label style="padding-right:5px;">Delimiter:</label><br/>
             <input type="radio" name="delimiter" value="whitespace" checked> Whitespace
             <input type="radio" name="delimiter" value="comma"> Comma
-            <input type="radio" name="delimiter" value="character"> Character
-            <input type="radio" name="delimiter" value="newline"> Next Line<br><br>
+            <input type="radio" name="delimiter" value="character"> Character<br><br>
             <input type="submit" name="remove_duplicates" value="Remove Duplicates">
         </form>
 
